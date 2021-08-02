@@ -1,0 +1,23 @@
+SRC	= blas_benchmark.c
+
+OBJ	=$(SRC:.c=.o)
+
+CC      = cc
+PP      = 
+
+LDFLAGS =
+CFLAGS  =  -O3 $(PP)
+LIBS    = -L/home/z19/z19/adrianj/blis/lib/zen2 -lblis
+
+PRG	= blas_blis
+
+main:	$(PRG) 
+
+.c.o:	Makefile.blis
+	$(CC) -c $(CFLAGS) $<
+
+$(PRG):$(OBJ) Makefile.blis 
+	$(CC) $(LDFLAGS) -o $@ $(OBJ) $(LIBS)
+
+clean:
+	rm -fr $(TMP) $(OBJ) $(PRG) core

@@ -1,0 +1,23 @@
+SRC	= blas_benchmark.c
+
+OBJ	=$(SRC:.c=.o)
+
+CC      = cc
+PP      = 
+
+LDFLAGS =
+CFLAGS  =  -O3 $(PP)
+LIBS    = -lsci_cray
+
+PRG	= blas_cray
+
+main:	$(PRG) 
+
+.c.o:	Makefile.libsci
+	$(CC) -c $(CFLAGS) $<
+
+$(PRG):$(OBJ) Makefile.libsci
+	$(CC) $(LDFLAGS) -o $@ $(OBJ) $(LIBS)
+
+clean:
+	rm -fr $(TMP) $(OBJ) $(PRG) core
