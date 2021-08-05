@@ -26,6 +26,11 @@ void daxpy_(MyInt *N, double *alpha, double *x, MyInt *incx, double *Y, MyInt *i
 void dgemm_(const char * TRANSA, const char *TRANSB, MyInt *m, MyInt *n, MyInt *k, double *alpha, double *A, MyInt *lda, double *B, MyInt *ldb, double *beta, double *C, MyInt *ldc);
 void dgemv_(const char * TRANSA, MyInt *m, MyInt *n, double *alpha, double *A, MyInt *lda, double *B, MyInt *incb, double *beta, double *C, MyInt *incc);
 
+void saxpy_(MyInt *N, float *alpha, float *x, MyInt *incx, float *Y, MyInt *incy);
+void sgemm_(const char * TRANSA, const char *TRANSB, MyInt *m, MyInt *n, MyInt *k, float *alpha, float *A, MyInt *lda, float *B, MyInt *ldb, float *beta, float *C, MyInt *ldc);
+void sgemv_(const char * TRANSA, MyInt *m, MyInt *n, float *alpha, float *A, MyInt *lda, float *B, MyInt *incb, float *beta, float *C, MyInt *incc);
+
+
 
 int64_t calc_cycles(void);
 
@@ -275,7 +280,7 @@ void benchmark_dgemm_latency(MyInt n, MyInt Runs, double *rtime, double *gflops)
 
 /*
  *-----------------------------------------------------------------------------
- *  Daxpy Benchmark
+ *  DAXPY Benchmark
  *-----------------------------------------------------------------------------
  */
 void benchmark_daxpy(MyInt n, MyInt Runs, double *rtime, double *gflops){
@@ -314,7 +319,7 @@ void benchmark_daxpy(MyInt n, MyInt Runs, double *rtime, double *gflops){
 }
 
 /*-----------------------------------------------------------------------------
- *  Daxpy Benchmark
+ *  DAXPY Benchmark
  *-----------------------------------------------------------------------------*/
 void benchmark_daxpy_latency(MyInt n, MyInt Runs, double *rtime, double *gflops){
   double *A, *B;
@@ -344,6 +349,324 @@ void benchmark_daxpy_latency(MyInt n, MyInt Runs, double *rtime, double *gflops)
   for (i=0; i < Runs; i++){
     cy_start = calc_cycles();
     daxpy_(&n,&alpha, A, &incx, B, &incy);
+    cy_end = calc_cycles();
+    cy_sum += (cy_end-cy_start);
+
+  }
+  te = wtime();
+  cy_sum /= Runs;
+  flops = 2.0 * n;
+  flops /=1000.0*1000.0*1000.0;
+  flops /= (te-ts)/Runs;
+  *rtime = cy_sum;
+  *gflops = flops;
+  free(A);
+  free(B);
+}
+
+
+/*
+ *-----------------------------------------------------------------------------
+ *  SGEMV Benchmark
+ *-----------------------------------------------------------------------------
+ */
+void benchmark_sgemv(MyInt n, MyInt Runs, double *rtime, double *gflops){
+  MyInt i;
+  float *A, *B, *C;
+  float ts,te;
+  float alpha=1, beta=1;
+  float flops;
+  MyInt incb = 1, incc = 1;
+
+  A = malloc(sizeof(float) * n *n );
+  B = malloc(sizeof(float) * n );
+  C = malloc(sizeof(float) * n );
+
+  for ( i = 0; i < n * n; i++){
+    A[i]=i+1;
+  }
+  for (i = 0; i < n; i++) {
+    B[i]=i*2+1;
+    C[i]=1;
+  }
+
+  /*
+   *-----------------------------------------------------------------------------
+   *  Warmup
+   *-----------------------------------------------------------------------------
+   */
+  sgemv_("N", &n,&n,&alpha, A, &n, B,&incb, &beta, C, &incc);
+  sgemv_("N", &n,&n,&alpha, A, &n, B,&incb, &beta, C, &incc);
+  sgemv_("N", &n,&n,&alpha, A, &n, B,&incb, &beta, C, &incc);
+
+  /*
+   *-----------------------------------------------------------------------------
+   *  Benchmark
+   *-----------------------------------------------------------------------------
+   */
+  ts = wtime();
+  for (i=0; i < Runs; i++){
+    sgemv_("N", &n,&n,&alpha, A, &n, B,&incb, &beta, C, &incc);
+  }
+  te = wtime();
+  flops = 2.0 * n *n;
+  flops /=1000*1000*1000;
+  flops /= (te-ts)/Runs;
+
+  *gflops = flops;
+  *rtime = (te-ts)/Runs;
+
+  free(A);
+  free(B);
+  free(C);
+
+}
+
+
+/*
+ *-----------------------------------------------------------------------------
+ *  SGEMV Latency Test
+ *-----------------------------------------------------------------------------
+ */
+void benchmark_sgemv_latency(MyInt n, MyInt Runs, double *rtime, double *gflops){
+  MyInt i;
+  float *A, *B, *C;
+  float ts,te;
+  float alpha=1, beta=1;
+  float flops;
+  MyInt incb = 1, incc = 1;
+  MyInt ld =1;
+  uint64_t cy_start, cy_end, cy_sum;
+  n = 1;
+
+  A = malloc(sizeof(float) * n *n );
+  B = malloc(sizeof(float) * n );
+  C = malloc(sizeof(float) * n );
+
+  for ( i = 0; i < n * n; i++){
+    A[i]=i+1;
+  }
+  for (i = 0; i < n; i++) {
+    B[i]=i*2+1;
+    C[i]=1;
+  }
+  n = 0;
+  /*
+   *-----------------------------------------------------------------------------
+   *  Warmup
+   *-----------------------------------------------------------------------------
+   */
+  sgemv_("N", &n,&n,&alpha, A, &ld, B,&incb, &beta, C, &incc);
+  sgemv_("N", &n,&n,&alpha, A, &ld, B,&incb, &beta, C, &incc);
+  sgemv_("N", &n,&n,&alpha, A, &ld, B,&incb, &beta, C, &incc);
+
+  /*
+   *-----------------------------------------------------------------------------
+   *  Benchmark
+   *-----------------------------------------------------------------------------
+   */
+  cy_start = 0;
+  cy_end = 0;
+  cy_sum = 0;
+  ts = wtime();
+  for (i=0; i < Runs; i++){
+    cy_start = calc_cycles();
+    sgemv_("N", &n,&n,&alpha, A, &ld, B,&incb, &beta, C, &incc);
+    cy_end = calc_cycles();
+    cy_sum += (cy_end-cy_start);
+  }
+  te = wtime();
+  cy_sum = cy_sum/Runs;
+  flops = 2.0 * n *n;
+  flops /=1000*1000*1000;
+  flops /= (te-ts)/Runs;
+
+  *gflops = flops;
+  *rtime = (float) cy_sum;
+
+  free(A);
+  free(B);
+  free(C);
+
+}
+
+
+/*
+ *-----------------------------------------------------------------------------
+ *  SGEMM Benchmark
+ *-----------------------------------------------------------------------------
+ */
+void benchmark_sgemm(MyInt n, MyInt Runs, double *rtime, double *gflops){
+  MyInt i;
+  float *A, *B, *C;
+  float ts,te;
+  float alpha=1, beta=1;
+  float flops;
+
+  A = malloc(sizeof(float) * n *n );
+  B = malloc(sizeof(float) * n *n );
+  C = malloc(sizeof(float) * n *n );
+
+  for ( i = 0; i < n * n; i++){
+    A[i]=i+1;
+    B[i]=i+0.5;
+  }
+
+  /*-----------------------------------------------------------------------------
+   *  Warmup
+   *-----------------------------------------------------------------------------*/
+  sgemm_("N","N", &n,&n,&n,&alpha, A, &n, B,&n, &beta, C, &n);
+  sgemm_("N","N", &n,&n,&n,&alpha, A, &n, B,&n, &beta, C, &n);
+  sgemm_("N","N", &n,&n,&n,&alpha, A, &n, B,&n, &beta, C, &n);
+
+  ts = wtime();
+  for (i=0; i < Runs; i++){
+    sgemm_("N","N", &n,&n,&n,&alpha, A, &n, B,&n, &beta, C, &n);
+  }
+  te = wtime();
+  float h = (float) n / 1000.0;
+  flops = 2.0 * h *h *h;
+  flops /= ((te-ts)/Runs);
+  *gflops = flops;
+  *rtime = ((te-ts)/Runs);
+
+  free(A);
+  free(B);
+  free(C);
+
+
+}
+
+/*
+ *-----------------------------------------------------------------------------
+ *  SGEMM Benchmark (Latency)
+ *-----------------------------------------------------------------------------
+ */
+void benchmark_sgemm_latency(MyInt n, MyInt Runs, double *rtime, double *gflops){
+  MyInt i;
+  float *A, *B, *C;
+  float ts,te;
+  float alpha=1, beta=1;
+  float flops;
+  MyInt ld = 1;
+  uint64_t cy_start, cy_end, cy_sum;
+
+  n = 1;
+  A = malloc(sizeof(float) * n *n );
+  B = malloc(sizeof(float) * n *n );
+  C = malloc(sizeof(float) * n *n );
+
+  for ( i = 0; i < n * n; i++){
+    A[i]=i+1;
+    B[i]=i+0.5;
+  }
+
+  n = 0;
+  /*
+   *-----------------------------------------------------------------------------
+   *  Warmup
+   *-----------------------------------------------------------------------------
+   */
+  sgemm_("N","N", &n,&n,&n,&alpha, A, &ld, B,&ld, &beta, C, &ld);
+  sgemm_("N","N", &n,&n,&n,&alpha, A, &ld, B,&ld, &beta, C, &ld);
+  sgemm_("N","N", &n,&n,&n,&alpha, A, &ld, B,&ld, &beta, C, &ld);
+
+  cy_sum = 0 ;
+  ts = wtime();
+  for (i=0; i < Runs; i++){
+    cy_start = calc_cycles();
+    sgemm_("N","N", &n,&n,&n,&alpha, A, &ld, B,&ld, &beta, C, &ld);
+    cy_end = calc_cycles();
+    cy_sum += (cy_end-cy_start);
+  }
+  te = wtime();
+  cy_sum /= Runs;
+  float h = (float) n / 1000.0;
+  flops = 2.0 * h *h *h;
+  flops /= ((te-ts)/Runs);
+  *gflops = flops;
+  *rtime = cy_sum;
+
+  free(A);
+  free(B);
+  free(C);
+
+
+}
+
+
+
+/*
+ *-----------------------------------------------------------------------------
+ *  SAXPY Benchmark
+ *-----------------------------------------------------------------------------
+ */
+void benchmark_saxpy(MyInt n, MyInt Runs, double *rtime, double *gflops){
+  float *A, *B;
+  float ts,te;
+  float alpha=1;
+  float flops;
+  MyInt incx = 1, incy = 1;
+  MyInt i;
+
+  A = malloc(sizeof(float) * n );
+  B = malloc(sizeof(float) * n );
+
+  for ( i = 0; i < n ; i++){
+    A[i]=i+1;
+    B[i]=i+0.5;
+  }
+  /* Warm up */
+  saxpy_(&n,&alpha, A, &incx, B, &incy);
+  saxpy_(&n,&alpha, A, &incx, B, &incy);
+  saxpy_(&n,&alpha, A, &incx, B, &incy);
+
+  /*  Benchmark */
+  ts = wtime();
+  for (i=0; i < Runs; i++){
+    saxpy_(&n,&alpha, A, &incx, B, &incy);
+  }
+  te = wtime();
+  flops = 2.0 * n;
+  flops /=1000.0*1000.0*1000.0;
+  flops /= (te-ts)/Runs;
+  *rtime = (te-ts)/Runs;
+  *gflops = flops;
+  free(A);
+  free(B);
+}
+
+/*-----------------------------------------------------------------------------
+ *  SAXPY Benchmark
+ *-----------------------------------------------------------------------------*/
+void benchmark_saxpy_latency(MyInt n, MyInt Runs, double *rtime, double *gflops){
+  float *A, *B;
+  float ts,te;
+  float alpha=1;
+  float flops;
+  MyInt incx = 1, incy = 1;
+  MyInt i;
+  uint64_t cy_start, cy_end, cy_sum;
+
+  A = malloc(sizeof(float) * n );
+  B = malloc(sizeof(float) * n );
+
+  for ( i = 0; i < n ; i++){
+    A[i]=i+1;
+    B[i]=i+0.5;
+  }
+  n = 0;
+  /* Warm up */
+  saxpy_(&n,&alpha, A, &incx, B, &incy);
+  saxpy_(&n,&alpha, A, &incx, B, &incy);
+  saxpy_(&n,&alpha, A, &incx, B, &incy);
+
+  /*  Benchmark */
+  cy_sum = 0;
+  ts = wtime();
+  for (i=0; i < Runs; i++){
+    cy_start = calc_cycles();
+    saxpy_(&n,&alpha, A, &incx, B, &incy);
     cy_end = calc_cycles();
     cy_sum += (cy_end-cy_start);
 
@@ -432,7 +755,13 @@ int main (int argc, char **argv) {
 	    printf(" - DAXPY_LATENCY       Benchmark the latency of the DAXPY operation\n");
 	    printf(" - DGEMM_LATENCY       Benchmark the latency of the DGEMM operation\n");
 	    printf(" - DGEMV_LATENCY       Benchmark the latency of the DGEMV operation\n");
-
+	    printf(" - SAXPY               Benchmark the SAXPY operation\n");
+	    printf(" - SGEMM               Benchmark the SGEMM operation\n");
+	    printf(" - SGEMV               Benchmark the SGEMV operation\n");
+	    printf(" - SAXPY_LATENCY       Benchmark the latency of the SAXPY operation\n");
+	    printf(" - SGEMM_LATENCY       Benchmark the latency of the SGEMM operation\n");
+	    printf(" - SGEMV_LATENCY       Benchmark the latency of the SGEMV operation\n");
+	    
 	    return EXIT_FAILURE;
 	  }
 	  else if (strcasecmp(optarg, "DAXPY") == 0 ){
@@ -462,7 +791,34 @@ int main (int argc, char **argv) {
 	    benchmark = & benchmark_daxpy_latency;
 	    latency = 1;
 	  }
-
+	  else if (strcasecmp(optarg, "SAXPY") == 0 ){
+	    strncpy(bk_name, "SAXPY", 128);
+	    benchmark = & benchmark_saxpy;
+	  }
+	  else if (strcasecmp(optarg, "SGEMM") == 0 ){
+	    strncpy(bk_name, "SGEMM", 128);
+	    benchmark = & benchmark_sgemm;
+	  }
+	  else if (strcasecmp(optarg, "SGEMV") == 0 ){
+	    strncpy(bk_name, "SGEMV", 128);
+	    benchmark = & benchmark_sgemv;
+	  }
+	  else if (strcasecmp(optarg, "SGEMV_LATENCY") == 0 ){
+	    strncpy(bk_name, "SGEMV_LATENCY", 128);
+	    benchmark = & benchmark_sgemv_latency;
+	    latency = 1;
+	  }
+	  else if (strcasecmp(optarg, "SGEMM_LATENCY") == 0 ){
+	    strncpy(bk_name, "SGEMM_LATENCY", 128);
+	    benchmark = & benchmark_sgemm_latency;
+	    latency = 1;
+	  }
+	  else if (strcasecmp(optarg, "SAXPY_LATENCY") == 0 ){
+	    strncpy(bk_name, "SAXPY_LATENCY", 128);
+	    benchmark = & benchmark_saxpy_latency;
+	    latency = 1;
+	  }
+	  
 	  break;
 	default:
 	  printf("Benchmark name does not match anything implemented\n");
