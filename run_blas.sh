@@ -7,7 +7,7 @@
 #SBATCH --qos=short
 #SBATCH --account=z19
 
-module restore /etc/cray-pe.d/PrgEnv-cray
+module load PrgEnv-cray
 
 export OMP_NUM_THREADS=1
 
@@ -35,7 +35,7 @@ srun -n 1 ./blas_blis -d 10000 -r 100 -b dgemv
 
 
 module use /work/y07/shared/archer2-modules/modulefiles-cse-dev
-module load mkl/19.0-117
+module load mkl/19.5-281 
 
 echo " "
 echo "Intel MKL"

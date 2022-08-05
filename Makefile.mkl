@@ -7,16 +7,16 @@ PP      =
 
 LDFLAGS =
 CFLAGS  =  -O3 $(PP)
-LIBS    = -L/home/z19/z19/adrianj/blis/lib/zen2 -lblis
+LIBS    = -L${MKLROOT}/lib/intel64 -lmkl_scalapack_lp64 -Wl,--no-as-needed -lmkl_gf_lp64 -lmkl_gnu_thread -lmkl_core -lmkl_blacs_intelmpi_lp64 -lgomp -lpthread -lm -ldl
 
-PRG	= blas_blis
+PRG	= blas_mkl
 
 main:	$(PRG) 
 
-.c.o:	Makefile.blis
+.c.o:	Makefile.mkl
 	$(CC) -c $(CFLAGS) $<
 
-$(PRG):$(OBJ) Makefile.blis 
+$(PRG):$(OBJ) Makefile.mkl 
 	$(CC) $(LDFLAGS) -o $@ $(OBJ) $(LIBS)
 
 clean:
